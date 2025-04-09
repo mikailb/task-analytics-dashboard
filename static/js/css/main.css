@@ -1,0 +1,111 @@
+/* Hovedstil for Task Analytics Dashboard */
+
+body {
+    background-color: #f8f9fa;
+    color: #212529;
+}
+
+/* Card-stil */
+.card {
+    border-radius: 0.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    background-color: rgba(0, 0, 0, 0.03);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+/* Statistikkort-stil */
+.card-body h2.card-text {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0;
+}
+
+/* Tabell-stil */
+.table-responsive {
+    overflow-x: auto;
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+/* Badge-stil */
+.badge {
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+}
+
+/* Navbar-stil */
+.navbar {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.navbar-brand {
+    font-weight: 700;
+}
+
+/* Footer-stil */
+footer {
+    border-top: 1px solid #dee2e6;
+}
+
+/* Responsiv justering for diagrammer */
+@media (max-width: 768px) {
+    .card-body div[id$="-chart"] {
+        height: 250px !important;
+    }
+}
+
+/* Tab-stil */
+.nav-tabs .nav-link {
+    color: #495057;
+}
+
+.nav-tabs .nav-link.active {
+    color: #0d6efd;
+    font-weight: 500;
+}
+
+/* Animasjoner for diagrammer */
+div[id$="-chart"] {
+    transition: all 0.3s ease;
+}
+
+div[id$="-chart"]:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* Tilpasning for datatabeller */
+div.dataTables_wrapper div.dataTables_info {
+    padding-top: 0.85em;
+}
+
+div.dataTables_wrapper div.dataTables_filter {
+    margin-bottom: 0.5rem;
+}
+
+/* Tooltips for diagrammer */
+.plotly .tooltip {
+    font-family: inherit;
+    font-size: 0.875rem;
+}
+
+/* Utskriftsstil */
+@media print {
+    .navbar, .footer, .nav-tabs {
+        display: none !important;
+    }
+    
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    
+    body {
+        background-color: white !important;
+    }
+}

@@ -1,0 +1,309 @@
+{% extends 'base.html' %}
+
+{% block title %}Detaljert analyse - Task Analytics{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="display-5">Detaljert analyse</h1>
+        <p class="lead">Dyptgående analyse av oppgavedata</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="completion-tab" data-bs-toggle="tab" href="#completion" role="tab">Gjennomføring</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="efficiency-tab" data-bs-toggle="tab" href="#efficiency" role="tab">Effektivitet</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="workload-tab" data-bs-toggle="tab" href="#workload" role="tab">Arbeidsbelastning</a>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content">
+                    <!-- Gjennomføringsanalyse -->
+                    <div class="tab-pane fade show active" id="completion" role="tabpanel">
+                        <div class="row">
+                            <div class="col-lg-6">
+                                <h5 class="card-title">Fullføringsgrad etter kategori</h5>
+                                <div id="completion-by-category-chart" style="height: 400px;"></div>
+                            </div>
+                            <div class="col-lg-6">
+                                <h5 class="card-title">Fullføringsgrad etter prioritet</h5>
+                                <div id="completion-by-priority-chart" style="height: 400px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Effektivitetsanalyse -->
+                    <div class="tab-pane fade" id="efficiency" role="tabpanel">
+                        <div class="row">
+                            <div class="col-lg-6">
+                                <h5 class="card-title">Estimert vs. faktisk tid</h5>
+                                <div id="time-comparison-chart" style="height: 400px;"></div>
+                            </div>
+                            <div class="col-lg-6">
+                                <h5 class="card-title">Effektivitet over tid</h5>
+                                <div id="efficiency-trend-chart" style="height: 400px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Arbeidsbelastningsanalyse -->
+                    <div class="tab-pane fade" id="workload" role="tabpanel">
+                        <div class="row">
+                            <div class="col-lg-6">
+                                <h5 class="card-title">Oppgavefordeling per person</h5>
+                                <div id="tasks-by-person-chart" style="height: 400px;"></div>
+                            </div>
+                            <div class="col-lg-6">
+                                <h5 class="card-title">Timebruk per person</h5>
+                                <div id="hours-by-person-chart" style="height: 400px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Tidslinje for oppgavegjennomføring</h5>
+            </div>
+            <div class="card-body">
+                <div id="task-timeline-chart" style="height: 400px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Hent oppgavedata for analyser
+    fetch('/api/tasks')
+        .then(response => response.json())
+        .then(tasks => {
+            // Forbered data for fullføringsgrad etter kategori
+            const categories = [...new Set(tasks.map(task => task.category))];
+            const completionByCategory = categories.map(category => {
+                const categoryTasks = tasks.filter(task => task.category === category);
+                const completedTasks = categoryTasks.filter(task => task.status === 'Fullført');
+                return {
+                    category: category,
+                    total: categoryTasks.length,
+                    completed: completedTasks.length,
+                    percentage: (completedTasks.length / categoryTasks.length * 100).toFixed(1)
+                };
+            });
+            
+            // Vis fullføringsgrad etter kategori
+            const completionByCategoryData = [{
+                x: completionByCategory.map(item => item.category),
+                y: completionByCategory.map(item => item.percentage),
+                type: 'bar',
+                marker: {
+                    color: 'rgb(55, 83, 109)'
+                },
+                text: completionByCategory.map(item => `${item.completed}/${item.total}`),
+                textposition: 'auto'
+            }];
+            
+            const completionByCategoryLayout = {
+                margin: { t: 10, l: 50, r: 10, b: 80 },
+                xaxis: {
+                    tickangle: -45
+                },
+                yaxis: {
+                    title: 'Fullføringsgrad (%)'
+                }
+            };
+            
+            Plotly.newPlot('completion-by-category-chart', completionByCategoryData, completionByCategoryLayout);
+            
+            // Forbered data for fullføringsgrad etter prioritet
+            const priorities = [...new Set(tasks.map(task => task.priority))];
+            const completionByPriority = priorities.map(priority => {
+                const priorityTasks = tasks.filter(task => task.priority === priority);
+                const completedTasks = priorityTasks.filter(task => task.status === 'Fullført');
+                return {
+                    priority: priority,
+                    total: priorityTasks.length,
+                    completed: completedTasks.length,
+                    percentage: (completedTasks.length / priorityTasks.length * 100).toFixed(1)
+                };
+            });
+            
+            // Vis fullføringsgrad etter prioritet
+            const completionByPriorityData = [{
+                x: completionByPriority.map(item => item.priority),
+                y: completionByPriority.map(item => item.percentage),
+                type: 'bar',
+                marker: {
+                    color: 'rgb(26, 118, 255)'
+                },
+                text: completionByPriority.map(item => `${item.completed}/${item.total}`),
+                textposition: 'auto'
+            }];
+            
+            const completionByPriorityLayout = {
+                margin: { t: 10, l: 50, r: 10, b: 50 },
+                yaxis: {
+                    title: 'Fullføringsgrad (%)'
+                }
+            };
+            
+            Plotly.newPlot('completion-by-priority-chart', completionByPriorityData, completionByPriorityLayout);
+            
+            // Forbered data for estimert vs. faktisk tid
+            const completedTasksWithTime = tasks.filter(task => 
+                task.status === 'Fullført' && 
+                task.estimated_hours !== null && 
+                task.actual_hours !== null
+            );
+            
+            const timeComparisonData = [{
+                x: completedTasksWithTime.map(task => task.category),
+                y: completedTasksWithTime.map(task => task.estimated_hours),
+                type: 'bar',
+                name: 'Estimert tid',
+                marker: {
+                    color: 'rgba(55, 128, 191, 0.7)'
+                }
+            }, {
+                x: completedTasksWithTime.map(task => task.category),
+                y: completedTasksWithTime.map(task => task.actual_hours),
+                type: 'bar',
+                name: 'Faktisk tid',
+                marker: {
+                    color: 'rgba(219, 64, 82, 0.7)'
+                }
+            }];
+            
+            const timeComparisonLayout = {
+                margin: { t: 10, l: 50, r: 10, b: 80 },
+                xaxis: {
+                    tickangle: -45
+                },
+                yaxis: {
+                    title: 'Timer'
+                },
+                barmode: 'group'
+            };
+            
+            Plotly.newPlot('time-comparison-chart', timeComparisonData, timeComparisonLayout);
+            
+            // Forbered data for oppgavefordeling per person
+            const people = [...new Set(tasks.map(task => task.assigned_to).filter(Boolean))];
+            const tasksByPerson = people.map(person => {
+                const personTasks = tasks.filter(task => task.assigned_to === person);
+                return {
+                    person: person,
+                    total: personTasks.length,
+                    completed: personTasks.filter(task => task.status === 'Fullført').length,
+                    inProgress: personTasks.filter(task => task.status === 'Pågående').length,
+                    notStarted: personTasks.filter(task => task.status === 'Ikke påbegynt').length
+                };
+            });
+            
+            // Vis oppgavefordeling per person
+            const tasksByPersonData = [{
+                x: tasksByPerson.map(item => item.person),
+                y: tasksByPerson.map(item => item.completed),
+                name: 'Fullført',
+                type: 'bar',
+                marker: {
+                    color: 'rgba(75, 192, 192, 0.7)'
+                }
+            }, {
+                x: tasksByPerson.map(item => item.person),
+                y: tasksByPerson.map(item => item.inProgress),
+                name: 'Pågående',
+                type: 'bar',
+                marker: {
+                    color: 'rgba(54, 162, 235, 0.7)'
+                }
+            }, {
+                x: tasksByPerson.map(item => item.person),
+                y: tasksByPerson.map(item => item.notStarted),
+                name: 'Ikke påbegynt',
+                type: 'bar',
+                marker: {
+                    color: 'rgba(201, 203, 207, 0.7)'
+                }
+            }];
+            
+            const tasksByPersonLayout = {
+                margin: { t: 10, l: 40, r: 10, b: 80 },
+                xaxis: {
+                    tickangle: -45
+                },
+                yaxis: {
+                    title: 'Antall oppgaver'
+                },
+                barmode: 'stack',
+                legend: {
+                    orientation: 'h',
+                    y: 1.1
+                }
+            };
+            
+            Plotly.newPlot('tasks-by-person-chart', tasksByPersonData, tasksByPersonLayout);
+            
+            // Tidslinje for oppgavegjennomføring
+            const completedTasksWithDates = tasks.filter(task => 
+                task.status === 'Fullført' && 
+                task.created_at && 
+                task.completed_at
+            );
+            
+            // Sorter etter fullføringsdato
+            completedTasksWithDates.sort((a, b) => 
+                new Date(a.completed_at) - new Date(b.completed_at)
+            );
+            
+            const timelineData = [{
+                x: completedTasksWithDates.map(task => new Date(task.completed_at)),
+                y: completedTasksWithDates.map((_, index) => index + 1),
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Fullførte oppgaver',
+                line: {
+                    shape: 'hv',
+                    color: 'rgb(55, 83, 109)'
+                },
+                marker: {
+                    size: 8,
+                    color: 'rgb(55, 83, 109)'
+                },
+                text: completedTasksWithDates.map(task => task.title),
+                hovertemplate: '%{text}<br>Fullført: %{x}<extra></extra>'
+            }];
+            
+            const timelineLayout = {
+                margin: { t: 10, l: 40, r: 10, b: 40 },
+                yaxis: {
+                    title: 'Kumulativt antall fullførte oppgaver'
+                },
+                xaxis: {
+                    title: 'Dato'
+                }
+            };
+            
+            Plotly.newPlot('task-timeline-chart', timelineData, timelineLayout);
+        });
+});
+</script>
+{% endblock %}

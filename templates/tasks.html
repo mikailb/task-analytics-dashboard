@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}Oppgaveoversikt - Task Analytics{% endblock %}
+
+{% block extra_head %}
+<!-- DataTables CSS -->
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.3/css/dataTables.bootstrap5.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="display-5">Oppgaveoversikt</h1>
+        <p class="lead">Komplett liste over alle oppgaver i systemet</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="tasks-table" class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Tittel</th>
+                                <th>Kategori</th>
+                                <th>Prioritet</th>
+                                <th>Status</th>
+                                <th>Opprettet</th>
+                                <th>Forfallsdato</th>
+                                <th>Tildelt til</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for task in tasks %}
+                            <tr>
+                                <td>{{ task.id }}</td>
+                                <td>{{ task.title }}</td>
+                                <td>{{ task.category }}</td>
+                                <td>
+                                    {% if task.priority == 'Høy' %}
+                                    <span class="badge bg-danger">{{ task.priority }}</span>
+                                    {% elif task.priority == 'Medium' %}
+                                    <span class="badge bg-warning text-dark">{{ task.priority }}</span>
+                                    {% else %}
+                                    <span class="badge bg-info text-dark">{{ task.priority }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if task.status == 'Fullført' %}
+                                    <span class="badge bg-success">{{ task.status }}</span>
+                                    {% elif task.status == 'Pågående' %}
+                                    <span class="badge bg-primary">{{ task.status }}</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ task.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ task.created_at.strftime('%Y-%m-%d') }}</td>
+                                <td>
+                                    {% if task.due_date %}
+                                        {{ task.due_date.strftime('%Y-%m-%d') }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>{{ task.assigned_to or '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- DataTables JS -->
+<script type="text/javascript" src="https://cdn.datatables.net/1.11.3/js/jquery.dataTables.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/1.11.3/js/dataTables.bootstrap5.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#tasks-table').DataTable({
+            "pageLength": 25,
+            "order": [[0, "desc"]],
+            "language": {
+                "search": "Søk:",
+                "lengthMenu": "Vis _MENU_ oppgaver per side",
+                "info": "Viser _START_ til _END_ av _TOTAL_ oppgaver",
+                "infoEmpty": "Viser 0 til 0 av 0 oppgaver",
+                "infoFiltered": "(filtrert fra _MAX_ totale oppgaver)",
+                "paginate": {
+                    "first": "Første",
+                    "last": "Siste",
+                    "next": "Neste",
+                    "previous": "Forrige"
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,259 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Task Analytics{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="display-5">Oppgaveanalyse Dashboard</h1>
+        <p class="lead">Oversikt over nøkkeldata fra oppgavebehandlingssystemet</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Statistikkort -->
+    <div class="col-md-3">
+        <div class="card bg-primary text-white mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Totalt antall oppgaver</h5>
+                <h2 class="card-text" id="total-tasks">-</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Fullførte oppgaver</h5>
+                <h2 class="card-text" id="completed-tasks">-</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Pågående oppgaver</h5>
+                <h2 class="card-text" id="in-progress-tasks">-</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Forfalte oppgaver</h5>
+                <h2 class="card-text" id="overdue-tasks">-</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Oppgavegjennomføringsdiagram -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5>Oppgavegjennomføring over tid</h5>
+            </div>
+            <div class="card-body">
+                <div id="task-completion-chart" style="height: 300px;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Kategoridiagram -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Oppgaver etter kategori</h5>
+            </div>
+            <div class="card-body">
+                <div id="category-distribution-chart" style="height: 300px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Gjennomsnittlig fullføringstidsdiagram -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Gjennomsnittlig fullføringstid per kategori (dager)</h5>
+            </div>
+            <div class="card-body">
+                <div id="avg-completion-time-chart" style="height: 300px;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Produktivitetstrenddiagram -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Produktivitetstrend</h5>
+            </div>
+            <div class="card-body">
+                <div id="productivity-trend-chart" style="height: 300px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Hent oppgavedata for statistikkort
+    fetch('/api/tasks')
+        .then(response => response.json())
+        .then(tasks => {
+            // Oppdater statistikkort
+            const now = new Date();
+            
+            const totalTasks = tasks.length;
+            const completedTasks = tasks.filter(task => task.status === 'Fullført').length;
+            const inProgressTasks = tasks.filter(task => task.status === 'Pågående').length;
+            const overdueTasks = tasks.filter(task => {
+                if (task.status !== 'Fullført' && task.due_date) {
+                    const dueDate = new Date(task.due_date);
+                    return dueDate < now;
+                }
+                return false;
+            }).length;
+            
+            document.getElementById('total-tasks').textContent = totalTasks;
+            document.getElementById('completed-tasks').textContent = completedTasks;
+            document.getElementById('in-progress-tasks').textContent = inProgressTasks;
+            document.getElementById('overdue-tasks').textContent = overdueTasks;
+        });
+    
+    // Hent og vis oppgavegjennomføring over tid
+    fetch('/api/task-completion')
+        .then(response => response.json())
+        .then(data => {
+            const trace1 = {
+                x: data.labels,
+                y: data.created,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Opprettet',
+                line: {
+                    color: 'rgb(49, 130, 189)',
+                    width: 2
+                }
+            };
+            
+            const trace2 = {
+                x: data.labels,
+                y: data.completed,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Fullført',
+                line: {
+                    color: 'rgb(204, 204, 0)',
+                    width: 2
+                }
+            };
+            
+            const layout = {
+                margin: { t: 10, l: 40, r: 10, b: 40 },
+                legend: {
+                    orientation: 'h',
+                    y: 1.1
+                },
+                yaxis: {
+                    title: 'Antall oppgaver'
+                }
+            };
+            
+            Plotly.newPlot('task-completion-chart', [trace1, trace2], layout);
+        });
+    
+    // Hent og vis kategorifordeling
+    fetch('/api/category-distribution')
+        .then(response => response.json())
+        .then(data => {
+            const trace = {
+                labels: data.labels,
+                values: data.data,
+                type: 'pie'
+            };
+            
+            const layout = {
+                margin: { t: 0, l: 0, r: 0, b: 0 }
+            };
+            
+            Plotly.newPlot('category-distribution-chart', [trace], layout);
+        });
+    
+    // Hent og vis gjennomsnittlig fullføringstid
+    fetch('/api/avg-completion-time')
+        .then(response => response.json())
+        .then(data => {
+            const trace = {
+                x: data.labels,
+                y: data.data,
+                type: 'bar',
+                marker: {
+                    color: 'rgb(158, 202, 225)'
+                }
+            };
+            
+            const layout = {
+                margin: { t: 10, l: 40, r: 10, b: 80 },
+                xaxis: {
+                    tickangle: -45
+                }
+            };
+            
+            Plotly.newPlot('avg-completion-time-chart', [trace], layout);
+        });
+    
+    // Hent og vis produktivitetstrend
+    fetch('/api/productivity-trend')
+        .then(response => response.json())
+        .then(data => {
+            const trace1 = {
+                x: data.labels,
+                y: data.tasks_count,
+                type: 'bar',
+                name: 'Fullførte oppgaver',
+                marker: {
+                    color: 'rgb(49, 130, 189)'
+                }
+            };
+            
+            const trace2 = {
+                x: data.labels,
+                y: data.avg_hours,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Gj.snitt timer',
+                yaxis: 'y2',
+                line: {
+                    color: 'rgb(204, 0, 0)',
+                    width: 2
+                }
+            };
+            
+            const layout = {
+                margin: { t: 10, l: 40, r: 40, b: 80 },
+                xaxis: {
+                    tickangle: -45
+                },
+                yaxis: {
+                    title: 'Antall oppgaver'
+                },
+                yaxis2: {
+                    title: 'Gj.snitt timer',
+                    overlaying: 'y',
+                    side: 'right'
+                },
+                legend: {
+                    orientation: 'h',
+                    y: 1.1
+                }
+            };
+            
+            Plotly.newPlot('productivity-trend-chart', [trace1, trace2], layout);
+        });
+});
