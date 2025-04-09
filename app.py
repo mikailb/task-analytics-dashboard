@@ -1,4 +1,29 @@
 from flask import Flask, render_template, request, jsonify
+from datetime import datetime
+import os
+import json
+
+app = Flask(__name__)
+
+# Oppsett av absolutt sti til databasen
+basedir = os.path.abspath(os.path.dirname(__file__))
+database_path = os.path.join(basedir, 'data', 'sample_tasks.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{database_path}'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = 'din-hemmelige-nøkkel-her'
+app.config['DEBUG'] = True
+
+# Sørg for at data-mappen eksisterer
+data_dir = os.path.join(basedir, 'data')
+if not os.path.exists(data_dir):
+    os.makedirs(data_dir)
+
+# Kontekstprosessor for å gjøre nåværende dato tilgjengelig i alle maler
+@app.context_processor
+def inject_now():
+    return {'now': datetime.now()}
+
+# Importerer databasen og modeller etter at app er konfigurert
 from models.task import db, Task
 from services.analytics import (
     get_task_completion_stats,
@@ -6,13 +31,8 @@ from services.analytics import (
     get_avg_completion_time,
     get_productivity_trend
 )
-import os
-import json
 
-app = Flask(__name__)
-app.config.from_object('config.DevelopmentConfig')
-
-# Initialisere databasen
+# Initialiserer databasen
 db.init_app(app)
 
 @app.route('/')
@@ -64,10 +84,17 @@ def tasks_data():
 if __name__ == '__main__':
     # Opprett databasen hvis den ikke finnes
     with app.app_context():
-        if not os.path.exists('data/sample_tasks.db'):
+        try:
             db.create_all()
-            # Importer og kjør seeddata-skript hvis databasen er tom
-            from data.seed_data import seed_database
-            seed_database()
+            print(f"Database created at {database_path}")
+            
+            # Sjekk om databasen er tom
+            if Task.query.count() == 0:
+                # Importer og kjør seeddata-skript
+                from data.seed_data import seed_database
+                seed_database()
+                print("Database seeded with sample data")
+        except Exception as e:
+            print(f"Database error: {e}")
     
     app.run(debug=True)
